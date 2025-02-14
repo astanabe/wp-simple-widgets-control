@@ -1,2 +1,2 @@
-# wp-simple-appearance-control
-A simple appearance control plugin for WordPress
+# wp-simple-widgets-control
+A simple widgets visibility control plugin for WordPress
