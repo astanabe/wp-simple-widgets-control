@@ -1,18 +1,18 @@
 <?php
 /**
- * Plugin Name:       Simple Appearance Control
- * Plugin URI:        https://github.com/astanabe/wp-simple-appearance-control
- * Description:       Simple Appearance Control Plugin for WordPress
+ * Plugin Name:       Simple Widgets Control
+ * Plugin URI:        https://github.com/astanabe/wp-simple-widgets-control
+ * Description:       A simple widgets visibility control plugin for WordPress
  * Author:            Akifumi S. Tanabe
  * Author URI:        https://github.com/astanabe
  * License:           GNU General Public License v2
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       wp-simple-appearance-control
+ * Text Domain:       wp-simple-widgets-control
  * Domain Path:       /languages
  * Version:           0.1.0
  * Requires at least: 6.4
  *
- * @package           WP_Simple_Appearance_Control
+ * @package           WP_Simple_Widgets_Control
  */
 
 // Security check
@@ -20,217 +20,207 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-// プラグイン無効化時の設定削除処理
-function wp_sac_plugin_deactivation() {
-    if (get_option('wp_sac_remove_settings') === 'remove') {
-        delete_option('wp_sac_remove_settings');
-        delete_metadata('post', 0, 'wp_sac_menu_display_option', '', true);
-        delete_metadata('post', 0, 'wp_sac_menu_roles', '', true);
-        delete_metadata('post', 0, 'wp_sac_menu_groups', '', true);
-    }
+// Add visibility field to widgets
+function wp_simple_widgets_control_add_visibility_field($widget, $return, $instance) {
+    $visibility = isset($instance['wp_simple_widgets_control_visibility']) ? $instance['wp_simple_widgets_control_visibility'] : 'always';
+    $roles = isset($instance['wp_simple_widgets_control_roles']) ? (array)$instance['wp_simple_widgets_control_roles'] : [];
+    $groups = isset($instance['wp_simple_widgets_control_groups']) ? (array)$instance['wp_simple_widgets_control_groups'] : [];
+    $all_roles = wp_roles()->roles;
+	$all_groups = function_exists('bp_is_active') && bp_is_active('groups') ? wp_simple_widgets_control_get_groups() : [];
+	?>
+	<p class="field-visibility description description-wide">
+		<label>
+			<?php esc_html_e('Visibility', 'wp-simple-widgets-control'); ?><br />
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="always" <?php checked($visibility, 'always'); ?>> Always display<br />
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="logged-out" <?php checked($visibility, 'logged-out'); ?>> Displays for Logged-out users only<br />
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="logged-in" <?php checked($visibility, 'logged-in'); ?>> Displays for Logged-in users only
+		</label>
+	</p>
+	<div class="wp-simple-widgets-control-roles-groups-<?php echo $item_id; ?>" <?php echo ($visibility === 'logged-in') ? '' : 'style="display:none;"'; ?>>
+		<p class="field-roles description">
+			<?php esc_html_e('Select Roles:', 'wp-simple-widgets-control'); ?><br />
+			<?php foreach ($all_roles as $role_key => $role) : ?>
+				<input type="checkbox" class="wp-simple-widgets-control-role-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_roles][]" value="<?php echo esc_attr($role_key); ?>" <?php checked(in_array($role_key, $roles)); ?>> <?php echo esc_html($role['name']); ?><br />
+			<?php endforeach; ?>
+		</p>
+		<?php if (!empty($all_groups)) : ?>
+			<p class="field-groups description">
+				<?php esc_html_e('Select Groups:', 'wp-simple-widgets-control'); ?><br />
+				<?php foreach ($all_groups as $group) : ?>
+					<input type="checkbox" class="wp-simple-widgets-control-group-<?php echo $widget->id; ?>" name="widget-<?php echo $item_id; ?>[wp_simple_widgets_control_groups][]" value="<?php echo esc_attr($group['id']); ?>" <?php checked(in_array($group['id'], $groups)); ?>> <?php echo esc_html($group['name']); ?><br />
+				<?php endforeach; ?>
+			</p>
+		<?php endif; ?>
+	</div>
+	<script>
+		jQuery(document).ready(function($) {
+			let item_id = "<?php echo $item_id; ?>";
+			function updateRadiobuttonState() {
+				let logeedinChecked = $('.wp-simple-widgets-control-visibility-' + item_id + ':checked').val() == 'logged-in';
+				if (logeedinChecked) {
+					$('.wp-simple-widgets-control-roles-groups-' + item_id).show();
+				} else {
+					$('.wp-simple-widgets-control-roles-groups-' + item_id).hide();
+				}
+			}
+			$('.wp-simple-widgets-control-visibility-' + item_id).on('change', updateRadiobuttonState);
+			updateRadiobuttonState();
+			function updateCheckboxState() {
+				let roleChecked = $('.wp-simple-widgets-control-role-' + item_id + ':checked').length > 0;
+				let groupChecked = $('.wp-simple-widgets-control-group-' + item_id + ':checked').length > 0;
+				if (roleChecked) {
+					$('.wp-simple-widgets-control-group-' + item_id).prop('disabled', true);
+				} else if (groupChecked) {
+					$('.wp-simple-widgets-control-role-' + item_id).prop('disabled', true);
+				} else {
+					$('.wp-simple-widgets-control-role-' + item_id + ', .wp-simple-widgets-control-group-' + item_id).prop('disabled', false);
+				}
+			}
+			$('.wp-simple-widgets-control-role-' + item_id + ', .wp-simple-widgets-control-group-' + item_id).on('change', updateCheckboxState);
+			updateCheckboxState();
+		});
+	</script>
+	<?php
 }
-register_deactivation_hook(__FILE__, 'wp_sac_plugin_deactivation');
+add_filter('in_widget_form', 'wp_simple_widgets_control_add_visibility_field', 10, 3);
 
-function wp_sac_plugin_deactivation_prompt($plugin) {
-    if ($plugin === plugin_basename(__FILE__)) {
-        echo '<div id="wp-sac-deactivation-dialog" class="notice notice-warning is-dismissible" style="display:none;">
-                <p><strong>Do you want to remove all settings?</strong></p>
-                <button id="wp-sac-remove-settings" class="button button-primary">Remove all settings</button>
-                <button id="wp-sac-keep-settings" class="button">Leave settings for reactivation</button>
-              </div>
-              <script>
-                document.addEventListener("DOMContentLoaded", function () {
-                    let deactivateLinks = document.querySelectorAll(".deactivate a");
-                    deactivateLinks.forEach(link => {
-                        if (link.href.includes("plugin=widget-display-control")) {
-                            link.addEventListener("click", function (event) {
-                                event.preventDefault();
-                                document.getElementById("wp-sac-deactivation-dialog").style.display = "block";
-                                document.getElementById("wp-sac-remove-settings").addEventListener("click", function () {
-                                    fetch("' . admin_url('admin-ajax.php') . '?action=wp_sac_remove_settings").then(() => {
-                                        window.location.href = link.href;
-                                    });
-                                });
-                                document.getElementById("wp-sac-keep-settings").addEventListener("click", function () {
-                                    window.location.href = link.href;
-                                });
-                            });
-                        }
-                    });
-                });
-              </script>';
-    }
-}
-add_action('admin_footer', 'wp_sac_plugin_deactivation_prompt');
-
-// Add appearance control option for widgets
-function wp_sac_widget_form_extend($widget, $return, $instance) {
-    $display_option = isset($instance['wp_sac_display_option']) ? $instance['wp_sac_display_option'] : 'always';
-    $selected_roles = isset($instance['wp_sac_roles']) ? (array) $instance['wp_sac_roles'] : [];
-    $selected_groups = isset($instance['wp_sac_groups']) ? (array) $instance['wp_sac_groups'] : [];
-    $roles = wp_roles()->roles;
-    ?>
-    <p>
-        <label for="<?php echo $widget->get_field_id('wp_sac_display_option'); ?>">Display Option:</label>
-        <br>
-        <input type="radio" name="<?php echo $widget->get_field_name('wp_sac_display_option'); ?>" value="always" <?php checked($display_option, 'always'); ?>> Always display<br>
-        <input type="radio" name="<?php echo $widget->get_field_name('wp_sac_display_option'); ?>" value="logged-in" <?php checked($display_option, 'logged-in'); ?> class="wp-sac-logged-in-radio"> Displays for Logged-in users only<br>
-        <input type="radio" name="<?php echo $widget->get_field_name('wp_sac_display_option'); ?>" value="logged-out" <?php checked($display_option, 'logged-out'); ?>> Displays for Logged-out users only
-    </p>
-    <div class="wp-sac-role-selection" style="display: <?php echo ($display_option === 'logged-in') ? 'block' : 'none'; ?>;">
-        <label>Restrict to specific roles:</label>
-        <br>
-        <?php foreach ($roles as $role_key => $role) : ?>
-            <input type="checkbox" name="<?php echo $widget->get_field_name('wp_sac_roles'); ?>[]" value="<?php echo esc_attr($role_key); ?>" <?php checked(in_array($role_key, $selected_roles)); ?> class="wp-sac-role-checkbox"> <?php echo esc_html($role['name']); ?><br>
-        <?php endforeach; ?>
-    </div>
-    <?php if (function_exists('bp_is_active') && bp_is_active('groups')): ?>
-        <div class="wp-sac-group-selection" style="display: <?php echo ($display_option === 'logged-in') ? 'block' : 'none'; ?>;">
-            <label>Restrict to specific BuddyPress Groups:</label>
-            <br>
-            <?php
-            if (function_exists('groups_get_groups')) {
-                $groups = groups_get_groups(array('show_hidden' => true));
-                foreach ($groups['groups'] as $group) : ?>
-                    <input type="checkbox" name="<?php echo $widget->get_field_name('wp_sac_groups'); ?>[]" value="<?php echo esc_attr($group->id); ?>" <?php checked(in_array($group->id, $selected_groups)); ?> class="wp-sac-group-checkbox"> <?php echo esc_html($group->name); ?><br>
-                <?php endforeach;
-            }
-            ?>
-        </div>
-    <?php endif; ?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            let roleCheckboxes = document.querySelectorAll('.wp-sac-role-checkbox');
-            let groupCheckboxes = document.querySelectorAll('.wp-sac-group-checkbox');
-            function toggleCheckboxes() {
-                let roleChecked = Array.from(roleCheckboxes).some(cb => cb.checked);
-                let groupChecked = Array.from(groupCheckboxes).some(cb => cb.checked);
-                roleCheckboxes.forEach(cb => cb.disabled = groupChecked);
-                groupCheckboxes.forEach(cb => cb.disabled = roleChecked);
-            }
-            roleCheckboxes.forEach(cb => cb.addEventListener('change', toggleCheckboxes));
-            groupCheckboxes.forEach(cb => cb.addEventListener('change', toggleCheckboxes));
-            toggleCheckboxes();
-        });
-    </script>
-    <?php
-    return $return;
-}
-add_filter('widget_form_callback', 'wp_sac_widget_form_extend', 10, 3);
-
-// Save appearance control option of widgets
-function wp_sac_widget_update($instance, $new_instance) {
-    $instance['wp_sac_display_option'] = isset($new_instance['wp_sac_display_option']) ? sanitize_text_field($new_instance['wp_sac_display_option']) : 'always';
-    $instance['wp_sac_roles'] = isset($new_instance['wp_sac_roles']) ? array_map('sanitize_text_field', (array) $new_instance['wp_sac_roles']) : [];
-    $instance['wp_sac_groups'] = isset($new_instance['wp_sac_groups']) ? array_map('sanitize_text_field', (array) $new_instance['wp_sac_groups']) : [];
+// Save visibility settings
+function wp_simple_widgets_control_save_visibility_settings($instance, $new_instance) {
+    $instance['wp_simple_widgets_control_visibility'] = $new_instance['wp_simple_widgets_control_visibility'];
+    $instance['wp_simple_widgets_control_roles'] = isset($new_instance['wp_simple_widgets_control_roles']) ? (array)$new_instance['wp_simple_widgets_control_roles'] : [];
+    $instance['wp_simple_widgets_control_groups'] = isset($new_instance['wp_simple_widgets_control_groups']) ? (array)$new_instance['wp_simple_widgets_control_groups'] : [];
     return $instance;
 }
-add_filter('widget_update_callback', 'wp_sac_widget_update', 10, 2);
+add_filter('widget_update_callback', 'wp_simple_widgets_control_save_visibility_settings', 10, 2);
 
-// Appearance control function for widgets
-function wp_sac_widget_display($instance, $widget, $args) {
-    if (isset($instance['wp_sac_display_option'])) {
-        $display_option = $instance['wp_sac_display_option'];
-        $allowed_roles = isset($instance['wp_sac_roles']) ? (array) $instance['wp_sac_roles'] : [];
-        $allowed_groups = isset($instance['wp_sac_groups']) ? (array) $instance['wp_sac_groups'] : [];
-
-        if ($display_option === 'logged-in' && is_user_logged_in()) {
-            $user = wp_get_current_user();
-            if (!empty($allowed_roles) && empty(array_intersect($allowed_roles, $user->roles))) {
-                return false;
-            }
-            if (function_exists('groups_get_user_groups') && !empty($allowed_groups)) {
-                $user_groups = groups_get_user_groups($user->ID)['groups'];
-                if (empty(array_intersect($allowed_groups, $user_groups))) {
-                    return false;
-                }
-            }
-        } elseif ($display_option === 'logged-out' && is_user_logged_in()) {
+// Filter widget based on visibility settings
+function wp_simple_widgets_control_filter_widget($instance, $widget, $args) {
+    if (!isset($instance['wp_simple_widgets_control_visibility']) || $instance['wp_simple_widgets_control_visibility'] === 'always') {
+        return $instance;
+    }
+    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-out' && is_user_logged_in()) {
+        return false;
+    }
+    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && !is_user_logged_in()) {
+        return false;
+    }
+    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && is_user_logged_in()) {
+        if (!empty($instance['wp_simple_widgets_control_roles']) && !array_intersect(wp_get_current_user()->roles, $instance['wp_simple_widgets_control_roles'])) {
+            return false;
+        }
+        if (function_exists('bp_is_active') && bp_is_active('groups') && !empty($instance['wp_simple_widgets_control_groups']) && !array_intersect(groups_get_user_groups(get_current_user_id())['groups'], $instance['wp_simple_widgets_control_groups'])) {
             return false;
         }
     }
     return $instance;
 }
-add_filter('widget_display_callback', 'wp_sac_widget_display', 10, 3);
+add_filter('widget_display_callback', 'wp_simple_widgets_control_filter_widget', 10, 3);
 
-// Add appearance control option for menu items
-function wp_sac_add_menu_meta_box() {
-    add_meta_box('wp_sac_menu_meta', 'Display Control', 'wp_sac_menu_meta_box', 'nav-menus', 'side', 'low');
-}
-add_action('admin_init', 'wp_sac_add_menu_meta_box');
-
-// Appearance control option configuration display function for menu items
-function wp_sac_menu_meta_box() {
-    $roles = wp_roles()->roles;
-    ?>
-    <p>
-        <label>Display Option:</label><br>
-        <input type="radio" name="wp_sac_menu_display_option" value="always" checked> Always display<br>
-        <input type="radio" name="wp_sac_menu_display_option" value="logged-in" class="wp-sac-logged-in-radio"> Displays for Logged-in users only<br>
-        <input type="radio" name="wp_sac_menu_display_option" value="logged-out"> Displays for Logged-out users only
-    </p>
-    <div class="wp-sac-role-selection" style="display: none;">
-        <label>Restrict to specific roles:</label><br>
-        <?php foreach ($roles as $role_key => $role) : ?>
-            <input type="checkbox" name="wp_sac_menu_roles[]" value="<?php echo esc_attr($role_key); ?>"> <?php echo esc_html($role['name']); ?><br>
-        <?php endforeach; ?>
-    </div>
-    <?php if (function_exists('bp_is_active') && bp_is_active('groups')): ?>
-        <div class="wp-sac-group-selection" style="display: none;">
-            <label>Restrict to specific BuddyPress Groups:</label><br>
-            <?php
-            if (function_exists('groups_get_groups')) {
-                $groups = groups_get_groups(array('show_hidden' => true));
-                foreach ($groups['groups'] as $group) : ?>
-                    <input type="checkbox" name="wp_sac_menu_groups[]" value="<?php echo esc_attr($group->id); ?>"> <?php echo esc_html($group->name); ?><br>
-                <?php endforeach;
-            }
-            ?>
-        </div>
-    <?php endif; ?>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            let displayRadios = document.querySelectorAll('input[name="wp_sac_menu_display_option"]');
-            let roleSelection = document.querySelector('.wp-sac-role-selection');
-            let groupSelection = document.querySelector('.wp-sac-group-selection');
-            function toggleSections() {
-                let loggedInSelected = document.querySelector('input[name="wp_sac_menu_display_option"][value="logged-in"]:checked');
-                roleSelection.style.display = loggedInSelected ? 'block' : 'none';
-                groupSelection.style.display = loggedInSelected ? 'block' : 'none';
-            }
-            displayRadios.forEach(radio => radio.addEventListener('change', toggleSections));
-            toggleSections();
-        });
-    </script>
-    <?php
+// Get top 50 groups
+function wp_simple_widgets_control_get_groups() {
+	if (!function_exists('bp_has_groups')) {
+		return [];
+	}
+	$groups = [];
+	if (bp_has_groups(['per_page' => 50, 'orderby' => 'total_member_count', 'order' => 'DESC'])) {
+		while (bp_groups()) {
+			bp_the_group();
+			$groups[] = ['id' => bp_get_group_id(), 'name' => bp_get_group_name()];
+		}
+	}
+	return $groups;
 }
 
-// Appearance control function for menu items
-function wp_sac_filter_menu_items($items, $args) {
-    foreach ($items as $key => $item) {
-        $display_option = get_post_meta($item->ID, 'wp_sac_menu_display_option', true);
-        $allowed_roles = get_post_meta($item->ID, 'wp_sac_menu_roles', true);
-        $allowed_groups = get_post_meta($item->ID, 'wp_sac_menu_groups', true);
-        if ($display_option === 'logged-in' && !is_user_logged_in()) {
-            unset($items[$key]);
-        } elseif ($display_option === 'logged-out' && is_user_logged_in()) {
-            unset($items[$key]);
-        }
-        if (!empty($allowed_roles) && is_user_logged_in()) {
-            $user = wp_get_current_user();
-            if (!array_intersect($allowed_roles, $user->roles)) {
-                unset($items[$key]);
-            }
-        }
-        if (!empty($allowed_groups) && is_user_logged_in()) {
-            if (function_exists('groups_get_user_groups')) {
-                $user_groups = groups_get_user_groups(get_current_user_id())['groups'];
-                if (!array_intersect($allowed_groups, $user_groups)) {
-                    unset($items[$key]);
-                }
-            }
-        }
-    }
-    return $items;
+// Page for deactivation
+function wp_simple_widgets_control_deactivate_page() {
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+	if (isset($_POST['wp_simple_widgets_control_deactivate_confirm']) && check_admin_referer('wp_simple_widgets_control_deactivate_confirm', 'wp_simple_widgets_control_deactivate_confirm_nonce')) {
+		if ($_POST['wp_simple_widgets_control_deactivate_confirm'] === 'remove') {
+			update_option('wp_simple_widgets_control_uninstall_settings', 'remove');
+		}
+		else {
+			update_option('wp_simple_widgets_control_uninstall_settings', 'keep');
+		}
+		deactivate_plugins(plugin_basename(__FILE__));
+		wp_safe_redirect(admin_url('plugins.php?deactivated=true'));
+		exit;
+	}
+	?>
+	<div class="wrap">
+		<h2>Deactivate Simple Widgets Control Plugin</h2>
+		<form method="post">
+			<?php wp_nonce_field('wp_simple_widgets_control_deactivate_confirm', 'wp_simple_widgets_control_deactivate_confirm_nonce'); ?>
+			<p>Do you want to remove all settings of this plugin when uninstalling?</p>
+			<p>
+				<label>
+					<input type="radio" name="wp_simple_widgets_control_deactivate_confirm" value="keep" checked />
+					Leave settings (default)
+				</label>
+			</p>
+			<p>
+				<label>
+					<input type="radio" name="wp_simple_widgets_control_deactivate_confirm" value="remove" />
+					Remove all settings
+				</label>
+			</p>
+			<p>
+				<input type="submit" class="button button-primary" value="Deactivate" />
+			</p>
+		</form>
+	</div>
+	<?php
+	exit;
 }
-add_filter('wp_nav_menu_objects', 'wp_sac_filter_menu_items', 10, 2);
+
+// Intercept deactivation request and redirect to confirmation screen
+function wp_simple_widgets_control_deactivate_hook() {
+	if (isset($_GET['action']) && $_GET['action'] === 'deactivate' && isset($_GET['plugin']) && $_GET['plugin'] === plugin_basename(__FILE__)) {
+		wp_safe_redirect(admin_url('admin.php?page=wp-simple-widgets-control-deactivate'));
+		exit;
+	}
+}
+add_action('admin_init', 'wp_simple_widgets_control_deactivate_hook');
+
+// Add deactivation confirmation page to the admin menu
+function wp_simple_widgets_control_add_deactivate_page() {
+	add_submenu_page(
+		null, // No parent menu, hidden page
+		'Deactivate Simple Widgets Control Plugin',
+		'Deactivate Simple Widgets Control Plugin',
+		'manage_options',
+		'wp-simple-widgets-control-deactivate',
+		'wp_simple_widgets_control_deactivate_page'
+	);
+}
+add_action('admin_menu', 'wp_simple_widgets_control_add_deactivate_page');
+
+// Remove all settings when uninstalling if specified
+function wp_simple_widgets_control_uninstall() {
+	if (get_option('wp_simple_widgets_control_uninstall_settings') === 'remove') {
+	    global $wpdb;
+	    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_widget_%'");
+	    $widget_options = $wpdb->get_results("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'widget_%'");
+	    foreach ($widget_options as $option) {
+	        $option_name = $option->option_name;
+	        $widget_data = get_option($option_name);
+	        if (is_array($widget_data)) {
+	            foreach ($widget_data as $widget_id => $widget_instance) {
+	                if (isset($widget_instance['wp_simple_widgets_control_visibility'])) {
+	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_visibility']);
+	                }
+	                if (isset($widget_instance['wp_simple_widgets_control_roles'])) {
+	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_roles']);
+	                }
+	                if (isset($widget_instance['wp_simple_widgets_control_groups'])) {
+	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_groups']);
+	                }
+	            }
+	            update_option($option_name, $widget_data);
+	        }
+	    }
+	    delete_option('wp_simple_widgets_control_uninstall_settings');
+	}
+}
+register_uninstall_hook(__FILE__, 'wp_simple_widgets_control_uninstall');
