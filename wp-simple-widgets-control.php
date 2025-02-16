@@ -31,52 +31,52 @@ function wp_simple_widgets_control_add_visibility_field($widget, $return, $insta
 	<p class="field-visibility description description-wide">
 		<label>
 			<?php esc_html_e('Visibility', 'wp-simple-widgets-control'); ?><br />
-			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="always" <?php checked($visibility, 'always'); ?>> Always display<br />
-			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="logged-out" <?php checked($visibility, 'logged-out'); ?>> Displays for Logged-out users only<br />
-			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_visibility]" value="logged-in" <?php checked($visibility, 'logged-in'); ?>> Displays for Logged-in users only
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="<?php echo esc_attr($widget->get_field_name('wp_simple_widgets_control_visibility')); ?>" value="always" <?php checked($visibility, 'always'); ?>> Always display<br />
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="<?php echo esc_attr($widget->get_field_name('wp_simple_widgets_control_visibility')); ?>" value="logged-out" <?php checked($visibility, 'logged-out'); ?>> Displays for Logged-out users only<br />
+			<input type="radio" class="wp-simple-widgets-control-visibility-<?php echo $widget->id; ?>" name="<?php echo esc_attr($widget->get_field_name('wp_simple_widgets_control_visibility')); ?>" value="logged-in" <?php checked($visibility, 'logged-in'); ?>> Displays for Logged-in users only
 		</label>
 	</p>
-	<div class="wp-simple-widgets-control-roles-groups-<?php echo $item_id; ?>" <?php echo ($visibility === 'logged-in') ? '' : 'style="display:none;"'; ?>>
+	<div class="wp-simple-widgets-control-roles-groups-<?php echo $widget->id; ?>" <?php echo ($visibility === 'logged-in') ? '' : 'style="display:none;"'; ?>>
 		<p class="field-roles description">
 			<?php esc_html_e('Select Roles:', 'wp-simple-widgets-control'); ?><br />
 			<?php foreach ($all_roles as $role_key => $role) : ?>
-				<input type="checkbox" class="wp-simple-widgets-control-role-<?php echo $widget->id; ?>" name="widget-<?php echo $widget->id; ?>[wp_simple_widgets_control_roles][]" value="<?php echo esc_attr($role_key); ?>" <?php checked(in_array($role_key, $roles)); ?>> <?php echo esc_html($role['name']); ?><br />
+				<input type="checkbox" class="wp-simple-widgets-control-role-<?php echo $widget->id; ?>" name="<?php echo esc_attr($widget->get_field_name('wp_simple_widgets_control_roles')); ?>" value="<?php echo esc_attr($role_key); ?>" <?php checked(in_array($role_key, $roles)); ?>> <?php echo esc_html($role['name']); ?><br />
 			<?php endforeach; ?>
 		</p>
 		<?php if (!empty($all_groups)) : ?>
 			<p class="field-groups description">
 				<?php esc_html_e('Select Groups:', 'wp-simple-widgets-control'); ?><br />
 				<?php foreach ($all_groups as $group) : ?>
-					<input type="checkbox" class="wp-simple-widgets-control-group-<?php echo $widget->id; ?>" name="widget-<?php echo $item_id; ?>[wp_simple_widgets_control_groups][]" value="<?php echo esc_attr($group['id']); ?>" <?php checked(in_array($group['id'], $groups)); ?>> <?php echo esc_html($group['name']); ?><br />
+					<input type="checkbox" class="wp-simple-widgets-control-group-<?php echo $widget->id; ?>" name="<?php echo esc_attr($widget->get_field_name('wp_simple_widgets_control_groups')); ?>" value="<?php echo esc_attr($group['id']); ?>" <?php checked(in_array($group['id'], $groups)); ?>> <?php echo esc_html($group['name']); ?><br />
 				<?php endforeach; ?>
 			</p>
 		<?php endif; ?>
 	</div>
 	<script>
 		jQuery(document).ready(function($) {
-			let item_id = "<?php echo $item_id; ?>";
+			let widget_id = "<?php echo $widget->id; ?>";
 			function updateRadiobuttonState() {
-				let logeedinChecked = $('.wp-simple-widgets-control-visibility-' + item_id + ':checked').val() == 'logged-in';
+				let logeedinChecked = $('.wp-simple-widgets-control-visibility-' + widget_id + ':checked').val() == 'logged-in';
 				if (logeedinChecked) {
-					$('.wp-simple-widgets-control-roles-groups-' + item_id).show();
+					$('.wp-simple-widgets-control-roles-groups-' + widget_id).show();
 				} else {
-					$('.wp-simple-widgets-control-roles-groups-' + item_id).hide();
+					$('.wp-simple-widgets-control-roles-groups-' + widget_id).hide();
 				}
 			}
-			$('.wp-simple-widgets-control-visibility-' + item_id).on('change', updateRadiobuttonState);
+			$('.wp-simple-widgets-control-visibility-' + widget_id).on('change', updateRadiobuttonState);
 			updateRadiobuttonState();
 			function updateCheckboxState() {
-				let roleChecked = $('.wp-simple-widgets-control-role-' + item_id + ':checked').length > 0;
-				let groupChecked = $('.wp-simple-widgets-control-group-' + item_id + ':checked').length > 0;
+				let roleChecked = $('.wp-simple-widgets-control-role-' + widget_id + ':checked').length > 0;
+				let groupChecked = $('.wp-simple-widgets-control-group-' + widget_id + ':checked').length > 0;
 				if (roleChecked) {
-					$('.wp-simple-widgets-control-group-' + item_id).prop('disabled', true);
+					$('.wp-simple-widgets-control-group-' + widget_id).prop('disabled', true);
 				} else if (groupChecked) {
-					$('.wp-simple-widgets-control-role-' + item_id).prop('disabled', true);
+					$('.wp-simple-widgets-control-role-' + widget_id).prop('disabled', true);
 				} else {
-					$('.wp-simple-widgets-control-role-' + item_id + ', .wp-simple-widgets-control-group-' + item_id).prop('disabled', false);
+					$('.wp-simple-widgets-control-role-' + widget_id + ', .wp-simple-widgets-control-group-' + widget_id).prop('disabled', false);
 				}
 			}
-			$('.wp-simple-widgets-control-role-' + item_id + ', .wp-simple-widgets-control-group-' + item_id).on('change', updateCheckboxState);
+			$('.wp-simple-widgets-control-role-' + widget_id + ', .wp-simple-widgets-control-group-' + widget_id).on('change', updateCheckboxState);
 			updateCheckboxState();
 		});
 	</script>
