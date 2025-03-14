@@ -22,10 +22,10 @@ if (!defined('ABSPATH')) {
 
 // Add visibility field to widgets
 function wp_simple_widgets_control_add_visibility_field($widget, $return, $instance) {
-    $visibility = isset($instance['wp_simple_widgets_control_visibility']) ? $instance['wp_simple_widgets_control_visibility'] : 'always';
-    $roles = isset($instance['wp_simple_widgets_control_roles']) ? (array)$instance['wp_simple_widgets_control_roles'] : [];
-    $groups = isset($instance['wp_simple_widgets_control_groups']) ? (array)$instance['wp_simple_widgets_control_groups'] : [];
-    $all_roles = wp_roles()->roles;
+	$visibility = isset($instance['wp_simple_widgets_control_visibility']) ? $instance['wp_simple_widgets_control_visibility'] : 'always';
+	$roles = isset($instance['wp_simple_widgets_control_roles']) ? (array)$instance['wp_simple_widgets_control_roles'] : [];
+	$groups = isset($instance['wp_simple_widgets_control_groups']) ? (array)$instance['wp_simple_widgets_control_groups'] : [];
+	$all_roles = wp_roles()->roles;
 	$all_groups = function_exists('bp_is_active') && bp_is_active('groups') ? wp_simple_widgets_control_get_groups() : [];
 	?>
 	<p class="field-visibility description description-wide">
@@ -86,33 +86,33 @@ add_filter('in_widget_form', 'wp_simple_widgets_control_add_visibility_field', 1
 
 // Save visibility settings
 function wp_simple_widgets_control_save_visibility_settings($instance, $new_instance) {
-    $instance['wp_simple_widgets_control_visibility'] = $new_instance['wp_simple_widgets_control_visibility'];
-    $instance['wp_simple_widgets_control_roles'] = isset($new_instance['wp_simple_widgets_control_roles']) ? (array)$new_instance['wp_simple_widgets_control_roles'] : [];
-    $instance['wp_simple_widgets_control_groups'] = isset($new_instance['wp_simple_widgets_control_groups']) ? (array)$new_instance['wp_simple_widgets_control_groups'] : [];
-    return $instance;
+	$instance['wp_simple_widgets_control_visibility'] = $new_instance['wp_simple_widgets_control_visibility'];
+	$instance['wp_simple_widgets_control_roles'] = isset($new_instance['wp_simple_widgets_control_roles']) ? (array)$new_instance['wp_simple_widgets_control_roles'] : [];
+	$instance['wp_simple_widgets_control_groups'] = isset($new_instance['wp_simple_widgets_control_groups']) ? (array)$new_instance['wp_simple_widgets_control_groups'] : [];
+	return $instance;
 }
 add_filter('widget_update_callback', 'wp_simple_widgets_control_save_visibility_settings', 10, 2);
 
 // Filter widget based on visibility settings
 function wp_simple_widgets_control_filter_widget($instance, $widget, $args) {
-    if (!isset($instance['wp_simple_widgets_control_visibility']) || $instance['wp_simple_widgets_control_visibility'] === 'always') {
-        return $instance;
-    }
-    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-out' && is_user_logged_in()) {
-        return false;
-    }
-    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && !is_user_logged_in()) {
-        return false;
-    }
-    if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && is_user_logged_in()) {
-        if (!empty($instance['wp_simple_widgets_control_roles']) && !array_intersect(wp_get_current_user()->roles, $instance['wp_simple_widgets_control_roles'])) {
-            return false;
-        }
-        if (function_exists('bp_is_active') && bp_is_active('groups') && !empty($instance['wp_simple_widgets_control_groups']) && !array_intersect(groups_get_user_groups(get_current_user_id())['groups'], $instance['wp_simple_widgets_control_groups'])) {
-            return false;
-        }
-    }
-    return $instance;
+	if (!isset($instance['wp_simple_widgets_control_visibility']) || $instance['wp_simple_widgets_control_visibility'] === 'always') {
+		return $instance;
+	}
+	if ($instance['wp_simple_widgets_control_visibility'] === 'logged-out' && is_user_logged_in()) {
+		return false;
+	}
+	if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && !is_user_logged_in()) {
+		return false;
+	}
+	if ($instance['wp_simple_widgets_control_visibility'] === 'logged-in' && is_user_logged_in()) {
+		if (!empty($instance['wp_simple_widgets_control_roles']) && !array_intersect(wp_get_current_user()->roles, $instance['wp_simple_widgets_control_roles'])) {
+			return false;
+		}
+		if (function_exists('bp_is_active') && bp_is_active('groups') && !empty($instance['wp_simple_widgets_control_groups']) && !array_intersect(groups_get_user_groups(get_current_user_id())['groups'], $instance['wp_simple_widgets_control_groups'])) {
+			return false;
+		}
+	}
+	return $instance;
 }
 add_filter('widget_display_callback', 'wp_simple_widgets_control_filter_widget', 10, 3);
 
@@ -199,28 +199,28 @@ add_action('admin_menu', 'wp_simple_widgets_control_add_deactivate_page');
 // Remove all settings when uninstalling if specified
 function wp_simple_widgets_control_uninstall() {
 	if (get_option('wp_simple_widgets_control_uninstall_settings') === 'remove') {
-	    global $wpdb;
-	    $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_widget_%'");
-	    $widget_options = $wpdb->get_results("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'widget_%'");
-	    foreach ($widget_options as $option) {
-	        $option_name = $option->option_name;
-	        $widget_data = get_option($option_name);
-	        if (is_array($widget_data)) {
-	            foreach ($widget_data as $widget_id => $widget_instance) {
-	                if (isset($widget_instance['wp_simple_widgets_control_visibility'])) {
-	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_visibility']);
-	                }
-	                if (isset($widget_instance['wp_simple_widgets_control_roles'])) {
-	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_roles']);
-	                }
-	                if (isset($widget_instance['wp_simple_widgets_control_groups'])) {
-	                    unset($widget_data[$widget_id]['wp_simple_widgets_control_groups']);
-	                }
-	            }
-	            update_option($option_name, $widget_data);
-	        }
-	    }
-	    delete_option('wp_simple_widgets_control_uninstall_settings');
+		global $wpdb;
+		$wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_widget_%'");
+		$widget_options = $wpdb->get_results("SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE 'widget_%'");
+		foreach ($widget_options as $option) {
+			$option_name = $option->option_name;
+			$widget_data = get_option($option_name);
+			if (is_array($widget_data)) {
+				foreach ($widget_data as $widget_id => $widget_instance) {
+					if (isset($widget_instance['wp_simple_widgets_control_visibility'])) {
+						unset($widget_data[$widget_id]['wp_simple_widgets_control_visibility']);
+					}
+					if (isset($widget_instance['wp_simple_widgets_control_roles'])) {
+						unset($widget_data[$widget_id]['wp_simple_widgets_control_roles']);
+					}
+					if (isset($widget_instance['wp_simple_widgets_control_groups'])) {
+						unset($widget_data[$widget_id]['wp_simple_widgets_control_groups']);
+					}
+				}
+				update_option($option_name, $widget_data);
+			}
+		}
+		delete_option('wp_simple_widgets_control_uninstall_settings');
 	}
 }
 register_uninstall_hook(__FILE__, 'wp_simple_widgets_control_uninstall');
